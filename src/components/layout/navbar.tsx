@@ -3,6 +3,7 @@
 import * as React from "react";
 
 import { cn } from "@/lib/utils";
+import { useHasMounted } from "@/hooks";
 import { Logo } from "@/components/common/logo";
 import { ThemeToggle } from "@/components/common/theme-toggle";
 import { LanguageToggle } from "@/components/common/language-toggle";
@@ -22,6 +23,7 @@ interface NavbarProps {
 
 export function Navbar({ className }: NavbarProps) {
   const navLinks = useNavLinks();
+  const hasMounted = useHasMounted();
 
   return (
     <header
@@ -53,11 +55,19 @@ export function Navbar({ className }: NavbarProps) {
           {/* Controls: Language, Theme & Notifications */}
           <LanguageToggle size="icon" />
           <ThemeToggle size="icon" className="hidden md:inline-flex" />
-          <NavbarNotifications />
-          <NavbarMessages />
 
-          {/* User Auth Profile / Guest CTA */}
-          <NavbarUserMenu />
+          {/* Auth controls branch on client-only query state (isLoading /
+              isAuthenticated), which differs between SSR and hydration. Render
+              a stable placeholder until mount so the server HTML matches. */}
+          {hasMounted ? (
+            <>
+              <NavbarNotifications />
+              <NavbarMessages />
+              <NavbarUserMenu />
+            </>
+          ) : (
+            <div className="hidden md:block size-9 animate-pulse rounded-full bg-muted" />
+          )}
 
           {/* Mobile Navigation Drawer */}
           <MobileNav items={navLinks} />

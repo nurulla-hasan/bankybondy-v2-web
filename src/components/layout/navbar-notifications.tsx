@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
 import {
@@ -25,8 +26,11 @@ import {
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
+import { chatKeys } from "@/lib/chat/keys";
 import { useAuth } from "@/hooks";
 import {
+  CHAT_LIST_LIMIT,
+  getChatList,
   useDeleteNotification,
   useNotificationPreferences,
   useNotifications,
@@ -213,6 +217,18 @@ function routeFor(item: NotificationItem): string | null {
   }
 }
 
+// These carry a bondLink id in redirectId; their actionable place is the
+// bond-link conversation, not the generic messages list.
+const BOND_LINK_NOTIFICATION_TYPES = new Set<string>([
+  "TRADE_PROPOSED",
+  "TRADE_COMPLETED",
+  "TRADE_REMINDER",
+  "GIFT_RECEIVED",
+  "GIFT_GIVEN",
+  "DOUBLE_SURPRISE",
+  "ENCOUNTER",
+]);
+
 interface NavbarNotificationsProps {
   className?: string;
 }
@@ -221,6 +237,7 @@ export function NavbarNotifications({ className }: NavbarNotificationsProps) {
   const t = useTranslations("Navbar");
   const router = useRouter();
   const locale = useLocale();
+  const queryClient = useQueryClient();
   const { isAuthenticated } = useAuth();
 
   const [open, setOpen] = React.useState(false);
@@ -271,9 +288,36 @@ export function NavbarNotifications({ className }: NavbarNotificationsProps) {
     });
   };
 
-  const handleItemClick = (item: NotificationItem) => {
+  const handleItemClick = async (item: NotificationItem) => {
     setOpen(false);
     markOne(item._id);
+
+    // Trade/gift notifications open their bond-link conversation (resolved the
+    // same way as bond-link-card), not the generic messages list.
+    if (BOND_LINK_NOTIFICATION_TYPES.has(item.type) && item.redirectId) {
+      const conversationId = await queryClient
+        .query({
+          queryKey: chatKeys.list(""),
+          queryFn: () => getChatList({ limit: CHAT_LIST_LIMIT }),
+          staleTime: 30 * 1000,
+        })
+        .then(
+          (res) =>
+            res.data.data.find(
+              (c) =>
+                c.type === "bond-link-group" &&
+                c.bondLink?._id === item.redirectId
+            )?._id ?? null
+        )
+        .catch(() => null);
+      router.push(
+        conversationId
+          ? `/messages?c=${encodeURIComponent(conversationId)}`
+          : "/messages"
+      );
+      return;
+    }
+
     const href = routeFor(item);
     if (href) router.push(href);
   };
