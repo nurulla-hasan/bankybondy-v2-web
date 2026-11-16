@@ -144,10 +144,25 @@ export function CreateBondDialog() {
     },
     onSubmit: ({ value }) => {
       createRequest.mutate(value, {
-        onSuccess: () => {
+        onSuccess: (response) => {
           successToast(t("createSuccessTitle"), t("createSuccess"));
           form.reset();
           setOpen(false);
+
+          // Matches compute async; open them now so the 3s poll fills the view in.
+          const createdId = response?.data?._id;
+          if (createdId) {
+            const params = new URLSearchParams(window.location.search);
+            params.delete("searchTerm");
+            params.delete("page");
+            params.delete("status");
+            params.delete("match");
+            params.set("tab", "matches");
+            params.set("request", createdId);
+            router.push(`${window.location.pathname}?${params.toString()}`, {
+              scroll: false,
+            });
+          }
         },
         onError: (error) => {
           if (isBondLimitReachedError(error)) {

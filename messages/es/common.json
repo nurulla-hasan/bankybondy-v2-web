@@ -13,5 +13,6 @@
   "pageNotFoundDesc": "La página que buscas no existe o ha sido movida.",
   "searchPlaceholder": "Buscar...",
   "searchLabel": "Buscar",
-  "searchClear": "Quitar búsqueda"
+  "searchClear": "Quitar búsqueda",
+  "backToTop": "Volver arriba"
 }

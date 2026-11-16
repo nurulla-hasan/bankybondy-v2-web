@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import { useTranslations } from "next-intl";
 
 import { PageWrapper } from "@/components/common/page-wrapper";
+import { ScrollToTopButton } from "@/components/common/scroll-to-top-button";
 import { SectionHeading } from "@/components/common/section-heading";
 import { BondTabs } from "@/app/(shell)/(private)/(with-footer)/bonds/_components/tabs/bond-tabs";
 import { CreateBondDialog } from "@/app/(shell)/(private)/(with-footer)/bonds/_components/dialogs/create-bond-dialog";
@@ -25,6 +26,8 @@ export default function BondsPage() {
       <Suspense fallback={null}>
         <BondTabs />
       </Suspense>
+
+      <ScrollToTopButton />
     </PageWrapper>
   );
 }
