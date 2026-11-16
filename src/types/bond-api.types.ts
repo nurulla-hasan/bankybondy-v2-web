@@ -113,6 +113,13 @@ export interface CreateBondLinkInput {
   requestedBonds: string[];
 }
 
+/** POST /bond-link/reject/:id response (bondLink.lifecycle.ts:186). */
+export interface RejectBondLinkResult {
+  status: "Canceled";
+  blocked: string[];
+  leftChat: boolean;
+}
+
 /**
  * POST /bond-rating/add-rating body (bondRating.validation.ts:3-15).
  * `rating` is an integer 1-5; `comment` is optional, max 500 chars.

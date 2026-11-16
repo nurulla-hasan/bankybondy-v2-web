@@ -6,6 +6,7 @@ import type {
   CreateBondLinkInput,
   RawBondLink,
   RawBondLinkList,
+  RejectBondLinkResult,
 } from "@/types";
 
 /**
@@ -47,5 +48,17 @@ export function markAsCompleteBond(bondLinkId: string) {
   return apiClient<ApiResponse<RawBondLink>>(
     `/bond-link/mark-as-complete/${encodeURIComponent(bondLinkId)}`,
     { method: "POST" },
+  );
+}
+
+/**
+ * Cancel a trade. Any participant can reject: the link flips to "Canceled" for
+ * everyone and the caller leaves the group chat (bondLink.lifecycle.ts:120-186).
+ * Endpoint: POST /bond-link/reject/:id (bondLink.routes.ts:36-41)
+ */
+export function rejectBondLink(bondLinkId: string) {
+  return apiClient<ApiResponse<RejectBondLinkResult>>(
+    `/bond-link/reject/${encodeURIComponent(bondLinkId)}`,
+    { method: "POST", body: { blockUserIds: [] } },
   );
 }

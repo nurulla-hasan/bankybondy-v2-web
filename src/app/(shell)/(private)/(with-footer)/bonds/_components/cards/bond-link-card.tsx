@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { MessageCircle, Star } from "lucide-react";
+import { MessageCircle, Star, X } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -9,6 +9,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Avatar, AvatarFallback, AvatarGroup } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { ConfirmationModal } from "@/components/common/confirmation-modal";
 import { RelativeTime } from "@/components/common/relative-time";
 import { useAuth } from "@/hooks/useAuth";
 import { chatKeys } from "@/lib/chat/keys";
@@ -19,6 +20,7 @@ import {
   CHAT_LIST_LIMIT,
   getChatList,
   useMarkBondLinkComplete,
+  useRejectBondLink,
 } from "@/services";
 import type { RawBondLink } from "@/types";
 import { RateBondLinkDialog } from "../dialogs/rate-bond-link-dialog";
@@ -33,6 +35,7 @@ export function BondLinkCard({ link }: { link: RawBondLink }) {
   const t = useTranslations("Bonds");
   const { user } = useAuth();
   const markComplete = useMarkBondLinkComplete();
+  const rejectLink = useRejectBondLink();
   const router = useRouter();
   const queryClient = useQueryClient();
   const [rateOpen, setRateOpen] = useState(false);
@@ -106,6 +109,19 @@ export function BondLinkCard({ link }: { link: RawBondLink }) {
     });
   };
 
+  // Returned to ConfirmationModal, which awaits it to drive its spinner.
+  const handleReject = async () => {
+    try {
+      await rejectLink.mutateAsync(link._id);
+      successToast(t("cancelLinkSuccessTitle"), t("cancelLinkSuccess"));
+    } catch (error) {
+      errorToast(
+        t("cancelLinkErrorTitle"),
+        getErrorMessage(error, t("cancelLinkError")),
+      );
+    }
+  };
+
   const canRate = (isOngoing && selfMarked) || isCompleted;
 
   return (
@@ -144,7 +160,7 @@ export function BondLinkCard({ link }: { link: RawBondLink }) {
                 : t("linkCompletedHint")}
         </span>
 
-        <div className="flex shrink-0 gap-2">
+        <div className="flex shrink-0 flex-wrap justify-end gap-2">
           {isOngoing && !selfMarked ? (
             <>
               <Button
@@ -169,6 +185,28 @@ export function BondLinkCard({ link }: { link: RawBondLink }) {
               <Star className="size-4" aria-hidden />
               {t("rate")}
             </Button>
+          ) : null}
+
+          {isOngoing ? (
+            <ConfirmationModal
+              title={t("cancelLinkTitle")}
+              description={t("cancelLinkDescription")}
+              confirmText={t("cancelLinkConfirm")}
+              loadingText={t("cancelling")}
+              cancelText={t("cancel")}
+              variant="destructive"
+              onConfirm={handleReject}
+              actionTrigger={
+                <Button
+                  variant="outline"
+                  size="icon"
+                  aria-label={t("cancelLink")}
+                  title={t("cancelLink")}
+                >
+                  <X className="size-4" aria-hidden />
+                </Button>
+              }
+            />
           ) : null}
         </div>
       </div>

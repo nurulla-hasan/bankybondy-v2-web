@@ -28,8 +28,10 @@ import {
   getMyBondLinks,
   getMyBondRequests,
   markAsCompleteBond,
+  rejectBondLink,
   setBondRequestPaused,
 } from "../api";
+import { chatKeys } from "@/lib/chat/keys";
 import { peopleKeys } from "./people.hook";
 
 export const BOND_REQUESTS_PAGE_SIZE = 12;
@@ -198,6 +200,19 @@ export function useMarkBondLinkComplete() {
     mutationFn: (bondLinkId: string) => markAsCompleteBond(bondLinkId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: bondKeys.links() });
+    },
+  });
+}
+
+export function useRejectBondLink() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (bondLinkId: string) => rejectBondLink(bondLinkId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: bondKeys.links() });
+      // The rejecter leaves the group conversation (bondLink.lifecycle.ts:146-150).
+      queryClient.invalidateQueries({ queryKey: chatKeys.lists() });
     },
   });
 }
