@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { motion, useReducedMotion } from "framer-motion";
 import { useTranslations } from "next-intl";
@@ -16,7 +17,13 @@ export function CtaBand() {
   const t = useTranslations("Home.cta");
   const reduceMotion = useReducedMotion();
   const { data } = useGetMyProfile();
-  const user = data?.data;
+
+  // Same rule as the hero: the profile is client-only state, so the server
+  // always renders the guest CTA. Swapping to the user CTA before mount broke
+  // hydration.
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  const user = mounted ? data?.data : undefined;
 
   return (
     <section className="relative overflow-hidden py-20 sm:py-24">

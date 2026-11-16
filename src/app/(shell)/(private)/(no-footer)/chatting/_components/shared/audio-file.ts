@@ -15,6 +15,10 @@ const AUDIO_MIME_TYPES = new Set([
   "audio/aac",
   "audio/mp4",
   "audio/x-m4a",
+  "audio/m4a",
+  "audio/3gpp",
+  "audio/amr",
+  "audio/opus",
 ]);
 
 const IMAGE_MIME_TYPES = new Set([
@@ -26,12 +30,11 @@ const IMAGE_MIME_TYPES = new Set([
 
 export function isAcceptedAudioFile(file: File): boolean {
   if (file.size > MAX_UPLOAD_BYTES) return false;
-  // Browser MediaRecorder can output various audio types (webm, ogg, mp4, etc.)
-  return (
-    !file.type ||
-    AUDIO_MIME_TYPES.has(file.type) ||
-    file.type.startsWith("audio/")
-  );
+  // Same rule the server applies: compare the base type, so MediaRecorder
+  // codec suffixes ("audio/webm;codecs=opus") still pass while formats the
+  // uploader rejects fail here instead of after a full upload.
+  const baseType = file.type.split(";")[0].trim().toLowerCase();
+  return !baseType || AUDIO_MIME_TYPES.has(baseType);
 }
 
 export function isAcceptedImageFile(file: File): boolean {

@@ -48,6 +48,7 @@ const SPECIAL_DOT = {
 type MatchSpecial = keyof typeof SPECIAL_DOT;
 
 const SURPRISE_TOKEN = "surprise";
+const EMPTY_TOKEN = "empty";
 
 const normalizeToken = (value?: string) => (value ?? "").trim().toLowerCase();
 
@@ -77,33 +78,42 @@ function resolveParticipants(match: RawBondMatch): BondParticipant[] {
   });
 }
 
-function resolveSpecial(
+// A match can include a gift (empty) AND a surprise at the same time; the
+// backend `type` keeps only one of them, so detect each token independently.
+function resolveSpecials(
   match: RawBondMatch,
   participants: BondParticipant[],
-): MatchSpecial | undefined {
-  if (match.type === "empty" || match.isFullEmpty) return "gift";
-  if (match.type !== "surprise") return undefined;
-
-  const hasSurprise = participants.some(
-    (participant) =>
-      normalizeToken(participant.offer) === SURPRISE_TOKEN ||
-      normalizeToken(participant.want) === SURPRISE_TOKEN,
-  );
-  if (!hasSurprise) return undefined;
-
-  // Double surprise = a pair where one side's want and the previous side's
-  // offer are both the 'surprise' token (same cycle rule as the backend).
-  const isDouble = participants.some((participant, index) => {
-    const previous =
-      participants[(index - 1 + participants.length) % participants.length];
-
-    return (
-      normalizeToken(participant.want) === SURPRISE_TOKEN &&
-      normalizeToken(previous.offer) === SURPRISE_TOKEN
+): MatchSpecial[] {
+  const hasToken = (token: string) =>
+    participants.some(
+      (participant) =>
+        normalizeToken(participant.offer) === token ||
+        normalizeToken(participant.want) === token,
     );
-  });
 
-  return isDouble ? "doubleSurprise" : "openSurprise";
+  const specials: MatchSpecial[] = [];
+
+  if (match.type === "empty" || match.isFullEmpty || hasToken(EMPTY_TOKEN)) {
+    specials.push("gift");
+  }
+
+  if (hasToken(SURPRISE_TOKEN)) {
+    // Double surprise = a pair where one side's want and the previous side's
+    // offer are both the 'surprise' token (same cycle rule as the backend).
+    const isDouble = participants.some((participant, index) => {
+      const previous =
+        participants[(index - 1 + participants.length) % participants.length];
+
+      return (
+        normalizeToken(participant.want) === SURPRISE_TOKEN &&
+        normalizeToken(previous.offer) === SURPRISE_TOKEN
+      );
+    });
+
+    specials.push(isDouble ? "doubleSurprise" : "openSurprise");
+  }
+
+  return specials;
 }
 
 function PersonNode({
@@ -274,7 +284,7 @@ export function MatchCard({ match }: { match: RawBondMatch }) {  const t = useTr
   const participantIds = [...new Set(participants.map((p) => p.id))];
   const matchId = [...bondIds].sort().join("|");
   const score = toPercent(match.matchScore);
-  const special = resolveSpecial(match, participants);
+  const specials = resolveSpecials(match, participants);
 
   const proposeForm = useForm({
     defaultValues: { name: "" } as ProposeBondValues,
@@ -318,15 +328,15 @@ export function MatchCard({ match }: { match: RawBondMatch }) {  const t = useTr
         <div className="flex flex-wrap items-center gap-2">
           <Badge variant={scoreVariant}>{t("matchScore", { score })}</Badge>
 
-          {special && (
-            <Badge variant="secondary">
+          {specials.map((special) => (
+            <Badge key={special} variant="secondary">
               <span
                 className={cn("size-1.5 rounded-full", SPECIAL_DOT[special])}
                 aria-hidden
               />
               {t(`special.${special}`)}
             </Badge>
-          )}
+          ))}
         </div>
 
         <div className="flex items-center gap-2 text-xs text-muted-foreground">

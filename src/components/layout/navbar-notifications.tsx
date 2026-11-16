@@ -292,9 +292,15 @@ export function NavbarNotifications({ className }: NavbarNotificationsProps) {
     setOpen(false);
     markOne(item._id);
 
-    // Trade/gift notifications open their bond-link conversation (resolved the
-    // same way as bond-link-card), not the generic messages list.
-    if (BOND_LINK_NOTIFICATION_TYPES.has(item.type) && item.redirectId) {
+    // Trade/gift notifications carry a bond-link id and open their conversation
+    // (resolved like bond-link-card). GENERAL too: a rejected trade notifies with
+    // GENERAL + the bond-link id (bondLink.lifecycle.ts:174-182), while legacy
+    // match notifications use GENERAL + a bond request id and fall back to matches.
+    const isTradeType = BOND_LINK_NOTIFICATION_TYPES.has(item.type);
+    const mayOpenConversation =
+      Boolean(item.redirectId) && (isTradeType || item.type === "GENERAL");
+
+    if (mayOpenConversation) {
       const conversationId = await queryClient
         .query({
           queryKey: chatKeys.list(""),
@@ -310,12 +316,16 @@ export function NavbarNotifications({ className }: NavbarNotificationsProps) {
             )?._id ?? null
         )
         .catch(() => null);
-      router.push(
-        conversationId
-          ? `/messages?c=${encodeURIComponent(conversationId)}`
-          : "/messages"
-      );
-      return;
+
+      if (conversationId) {
+        router.push(`/messages?c=${encodeURIComponent(conversationId)}`);
+        return;
+      }
+
+      if (isTradeType) {
+        router.push("/messages");
+        return;
+      }
     }
 
     const href = routeFor(item);

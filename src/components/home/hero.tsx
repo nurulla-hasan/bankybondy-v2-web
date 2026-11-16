@@ -21,7 +21,14 @@ import { useGetMyProfile } from "@/services";
 export function Hero() {
   const t = useTranslations("Hero");
   const { data: profileData } = useGetMyProfile();
-  const user = profileData?.data;
+
+  // The profile only exists in the client query cache, so the server always
+  // renders the signed-out CTA. Branching on `user` before mount swapped the
+  // markup during hydration and broke the tree; hold the signed-out CTA until
+  // the first client render has committed.
+  const [mounted, setMounted] = React.useState(false);
+  React.useEffect(() => setMounted(true), []);
+  const user = mounted ? profileData?.data : undefined;
 
   const [expanded, setExpanded] = React.useState(false);
 
@@ -171,6 +178,7 @@ export function Hero() {
               )
             ) : (
               <Button
+                key="sign-in"
                 size="lg"
                 render={<Link href="/login" />}
                 className="rounded-full px-8 font-medium shadow-md shadow-primary/25 hover:shadow-lg hover:shadow-primary/35 hover:scale-105 transition-all duration-300 cursor-pointer"
